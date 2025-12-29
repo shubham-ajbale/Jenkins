@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+
+    stages {
+
+        stage('Stage-1: Pull Code') {
+            steps {
+                git branch: 'devops',
+                    url: 'https://github.com/abhilashmwaghmare/EASY_CRUD.git'
+            }
+        }
+
+        stage('Stage-2: Build') {
+            steps {
+                sh '''
+                cd backend
+                mvn clean package -DskipTests
+                '''
+            }
+        }
+
+        stage('Stage-3: Test') {
+            steps {
+                withSonarQubeEnv(
+                    installationName: 'sonarqube',
+                    credentialsId: 'sonarqube-token'
+                ) {
+                    sh '''
+                    cd backend
+                    mvn sonar:sonar \
+                    -Dsonar.projectKey=studentapp
+                    '''
+                }
+            }
+        }
+
+        stage('Stage-4: Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true,
+                        credentialsId: 'sonarqube-token'
+                }
+            }
+        }
+
+        stage('Stage-5: Deploy') {
+            steps {
+                echo 'Deploy successfully'
+            }
+        }
+
+    }
+}
